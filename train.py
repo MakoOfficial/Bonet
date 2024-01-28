@@ -18,7 +18,7 @@ import os.path as osp
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import horovod.torch as hvd
+# import horovod.torch as hvd
 from torchvision import transforms
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
@@ -104,13 +104,13 @@ if not os.path.exists(args.save_folder):
     os.makedirs(args.save_folder)
 
 # Horovod settings
-hvd.init()
-torch.cuda.set_device(hvd.local_rank())
-torch.cuda.manual_seed(hvd.size())
-
-args.distributed = hvd.size() > 1
-args.rank = hvd.rank()
-args.size = hvd.size()
+# hvd.init()
+# torch.cuda.set_device(hvd.local_rank())
+# torch.cuda.manual_seed(hvd.size())
+#
+# args.distributed = hvd.size() > 1
+args.rank = 0
+args.size = 1
 
 # CREATE THE NETWORK ARCHITECTURE AND LOAD THE BEST MODEL
 if args.heatmaps:
@@ -164,11 +164,11 @@ if osp.exists(optim_to_load):
                                              loc: storage))
 
 # Horovod
-hvd.broadcast_parameters(net.state_dict(), root_rank=0)
+# hvd.broadcast_parameters(net.state_dict(), root_rank=0)
 
-optimizer = hvd.DistributedOptimizer(
-    optimizer, named_parameters=net.named_parameters())
-hvd.broadcast_optimizer_state(optimizer, root_rank=0)
+# optimizer = hvd.DistributedOptimizer(
+#     optimizer, named_parameters=net.named_parameters())
+# hvd.broadcast_optimizer_state(optimizer, root_rank=0)
 group = optimizer.param_groups[0]
 group['betas'] = (float(group['betas'][0]), float(group['betas'][1]))
 
@@ -183,27 +183,27 @@ train_transform = transforms.Compose([transforms.Resize((500, 500)),
 val_transform = transforms.Compose([transforms.Resize((500, 500)),
                                transforms.ToTensor()])
 
-if args.heatmaps:
-    from data.data_loader import Boneage_HeatmapDataset as Dataset
-else:
-    from data.data_loader import BoneageDataset as Dataset
+# if args.heatmaps:
+#     from data.data_loader import Boneage_HeatmapDataset as Dataset
+# else:
+from data.data_loader import BoneageDataset as Dataset
 
-train_dataset = Dataset(args.data_train, args.ann_path_train,args.rois_path_train,
+train_dataset = Dataset(args.data_train, args.ann_path_train,None,
                                    img_transform=train_transform,crop=args.cropped,dataset=args.dataset)
-val_dataset = Dataset(args.data_val, args.ann_path_val,args.rois_path_val,
+val_dataset = Dataset(args.data_val, args.ann_path_val,None,
                                  img_transform=val_transform,crop=args.cropped,dataset=args.dataset)
 
 # Data samplers
 train_sampler = None
 val_sampler = None
 
-if args.distributed:
-    train_sampler = DistributedSampler(train_dataset,
-                                       num_replicas=args.size,
-                                       rank=args.rank)
-    val_sampler = DistributedSampler(val_dataset,
-                                     num_replicas=args.size,
-                                     rank=args.rank)
+# if args.distributed:
+#     train_sampler = DistributedSampler(train_dataset,
+#                                        num_replicas=args.size,
+#                                        rank=args.rank)
+#     val_sampler = DistributedSampler(val_dataset,
+#                                      num_replicas=args.size,
+#                                      rank=args.rank)
 
 train_loader = DataLoader(train_dataset,
                              shuffle=(train_sampler is None),
@@ -234,9 +234,9 @@ def main():
         out_file = open(os.path.join(args.save_folder, 'train.csv'), 'a+')
         
         for epoch in range(args.start_epoch, args.epochs + 1):
-            if args.distributed:
-                train_sampler.set_epoch(epoch)
-                val_sampler.set_epoch(epoch)
+            # if args.distributed:
+            #     train_sampler.set_epoch(epoch)
+            #     val_sampler.set_epoch(epoch)
             if args.rank == 0:
                 epoch_start_time = time.time()
             train_loss = train(epoch)
@@ -333,8 +333,8 @@ def evaluate():
 
 def metric_average(val, name):
     tensor = torch.tensor(val)
-    avg_tensor = hvd.allreduce(tensor, name=name)
-    return avg_tensor.item()
+    # avg_tensor = hvd.allreduce(tensor, name=name)
+    return tensor.item()
 
 
 class AverageMeter(object):

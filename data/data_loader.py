@@ -13,6 +13,7 @@ from torchvision import transforms
 from torch.utils.data import Dataset
 from scipy.ndimage import gaussian_filter
 import torchvision.transforms.functional as TF
+import cv2
 
 # ========================================================================
 # Auxiliary functions
@@ -152,7 +153,7 @@ class BoneageDataset(Dataset):
         self.annotations = pd.read_csv(ann_file)#,dtype=object)
         self.img_transform = img_transform
         self.crop=crop
-        self.kpts = load_json(json_file)
+        # self.kpts = load_json(json_file)
         self.half= dataset=='RHPE' and not crop
         self.dataset=dataset
 
@@ -169,14 +170,15 @@ class BoneageDataset(Dataset):
         else:
             image_name=str(info[0])
 
-        img = np.array(Image.open(os.path.join(self.img_dir, image_name+'.png')).convert('L'))
-        bone_age = torch.tensor(info[2], dtype=torch.float)
-        gender = torch.tensor(info[1]*1, dtype=torch.float).unsqueeze_(-1)
+        # img = np.array(Image.open(os.path.join(self.img_dir, image_name+'.png')).convert('L'))
+        img = cv2.imread(os.path.join(self.img_dir, image_name+'.png'), cv2.IMREAD_GRAYSCALE)
+        bone_age = torch.tensor(info[1], dtype=torch.float)
+        gender = torch.tensor(info[2], dtype=torch.float).unsqueeze_(-1)
 
-        if self.crop:
-            img=crop_original(image_name,img,self.kpts,half=False)
-        if self.half:
-            img=crop_original(image_name,img,self.kpts,half=True)
+        # if self.crop:
+        #     img=crop_original(image_name,img,self.kpts,half=False)
+        # if self.half:
+        #     img=crop_original(image_name,img,self.kpts,half=True)
 
         if self.img_transform:
             out_img = self.img_transform(Image.fromarray(img))

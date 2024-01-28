@@ -4,20 +4,20 @@ NUM_EPOCHS=60
 LR=0.0001
 PATIENCE=2
 BATCH_SIZE=20
-NUM_WORKERS=0
+NUM_WORKERS=8
 NUM_GPUS=1
 GPUS=0
 
-SSD_LOCATION=
+SSD_LOCATION="../../autodl-tmp/Bonet"
 DATASET="RSNA" #RHPE
 EXPERIMENT_NAME="Experiment"
 
-DATA_TRAIN=
-ANN_PATH_TRAIN=
+DATA_TRAIN="../../autodl-tmp/archive/train"
+ANN_PATH_TRAIN="../../autodl-tmp/archive/train.csv"
 ROIS_PATH_TRAIN=
 
-DATA_VAL=
-ANN_PATH_VAL=
+DATA_VAL="../../autodl-tmp/archive/valid"
+ANN_PATH_VAL="../../autodl-tmp/archive/valid.csv"
 ROIS_PATH_VAL=
 
 DATA_TEST=
@@ -31,4 +31,4 @@ SNAPSHOT=$SAVE_FOLDER"/boneage_bonet_snapshot.pth"
 OPTIM_SNAPSHOT=$SAVE_FOLDER"/boneage_bonet_optim.pth"
 
 
-CUDA_VISIBLE_DEVICES=$GPUS mpirun -np $NUM_GPUS -H localhost:$NUM_GPUS -bind-to none -map-by slot -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH -x HOROVOD_CUDA_HOME=/usr/local/cuda-10.0 -mca pml ob1 -mca btl ^openib python -m pdb -c continue train.py --data-train $DATA_TRAIN --ann-path-train $ANN_PATH_TRAIN --rois-path-train $ROIS_PATH_TRAIN --data-val $DATA_VAL --ann-path-val $ANN_PATH_VAL --rois-path-val $ROIS_PATH_VAL --batch-size $BATCH_SIZE --start-epoch $START_EPOCH --epochs $NUM_EPOCHS --lr $LR --patience $PATIENCE --gpu $GPUS --save-folder $SAVE_FOLDER --dataset $DATASET --eval-first --workers $NUM_WORKERS #>> $SAVE_FOLDER"/log.txt" #Uncomment if you want a log of your training
+CUDA_VISIBLE_DEVICES=0 python train.py --data-train "../../autodl-tmp/archive/train" --ann-path-train "../../autodl-tmp/archive/train.csv" --data-val "../../autodl-tmp/archive/valid" --ann-path-val "../../autodl-tmp/archive/valid.csv" --batch-size 20 --start-epoch 0 --epochs 60 --lr 1e-4 --patience 2 --gpu 0 --save-folder "../../autodl-tmp/Bonet/TRAIN/Experiment" --dataset "RSNA" --eval-first --workers 8 #>> $SAVE_FOLDER"/log.txt" #Uncomment if you want a log of your training

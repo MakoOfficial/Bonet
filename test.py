@@ -18,7 +18,7 @@ import os.path as osp
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import horovod.torch as hvd
+# import horovod.torch as hvd
 from torchvision import transforms
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
@@ -26,7 +26,7 @@ from torch.utils.data.distributed import DistributedSampler
 
 # Local imports
 from models.bonet import BoNet
-from data.boneage_loader import BoneageDataset
+# from data.boneage_loader import BoneageDataset
 
 # Other imports
 from tqdm import tqdm
@@ -87,19 +87,19 @@ if not os.path.exists(os.path.join(args.save_folder, 'inference')):
 
 
 # Horovod settings
-hvd.init()
-torch.cuda.set_device(hvd.local_rank())
-torch.cuda.manual_seed(hvd.size())
+# hvd.init()
+# torch.cuda.set_device(hvd.local_rank())
+# torch.cuda.manual_seed(hvd.size())
 
-args.distributed = hvd.size() > 1
-args.rank = hvd.rank()
-args.size = hvd.size()
+args.distributed = 0
+args.rank = 0
+args.size = 1
 
 # CREATE THE NETWORK ARCHITECTURE AND LOAD THE BEST MODEL
-if args.heatmaps:
-    from models.bonet_heatmap import BoNet
-else:
-    from models.bonet import BoNet
+# if args.heatmaps:
+#     from models.bonet_heatmap import BoNet
+# else:
+from models.bonet import BoNet
 
 net = BoNet()
 
@@ -131,16 +131,16 @@ net = net.to(device)
 criterion = nn.L1Loss()
 
 # Horovod
-hvd.broadcast_parameters(net.state_dict(), root_rank=0)
+# hvd.broadcast_parameters(net.state_dict(), root_rank=0)
 
 # Dataloader
 test_transform = transforms.Compose([transforms.Resize((500, 500)),
                                transforms.ToTensor()])
 
-if args.heatmaps:
-    from data.data_loader import Boneage_HeatmapDataset as Dataset
-else:
-    from data.data_loader import BoneageDataset as Dataset
+# if args.heatmaps:
+#     from data.data_loader import Boneage_HeatmapDataset as Dataset
+# else:
+from data.data_loader import BoneageDataset as Dataset
 
 test_dataset = Dataset(args.data_test, args.ann_path_test,args.rois_path_test,
                                   img_transform=test_transform,crop=args.cropped,dataset=args.dataset)
@@ -161,8 +161,8 @@ test_loader = DataLoader(test_dataset,
 
 def main():
     print('Inference begins...')
-    carpograms = pd.read_csv(os.path.join('Paths', args.ann_path_test))
-    ids = carpograms.ix[:, 0]
+    carpograms = pd.read_csv(args.ann_path_test)
+    ids = carpograms.loc[:, 'id']
     p_dict = dict.fromkeys(ids)
     p_dict = test(args, net, test_loader, test_sampler,
                   criterion, p_dict)
@@ -201,7 +201,7 @@ def test(args, net, loader, sampler, criterion, p_dict):
             labels = Variable(labels).cuda()
             outputs = net(inputs, gender)
 
-            p_dict[p_id] = outputs
+            p_dict[p_id.item()] = outputs.squeeze().item()
             loss = criterion(outputs.squeeze_(), labels)
             
             epoch_loss.update(loss)
@@ -214,8 +214,8 @@ def test(args, net, loader, sampler, criterion, p_dict):
 
 def metric_average(val, name):
     tensor = torch.tensor(val)
-    avg_tensor = hvd.allreduce(tensor, name=name)
-    return avg_tensor.item()
+    # avg_tensor = hvd.allreduce(tensor, name=name)
+    return tensor.item()
 
 
 class AverageMeter(object):
